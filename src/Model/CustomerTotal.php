@@ -1,10 +1,10 @@
-<?php
+<?php declare(strict_types=1);
 
 
 namespace RonaldHristov\DocumentsCalculationChallenge\Model;
 
 
-class CustomerTotal
+class CustomerTotal implements Model
 {
     /**
      * @var Customer
@@ -41,5 +41,10 @@ class CustomerTotal
     {
         $string = sprintf('Customer %s - %s %s', $this->customer->getName(), number_format($this->total, 2), $this->currency->getName());
         return $string;
+    }
+
+    public function getId()
+    {
+        return $this->customer->getId();
     }
 }

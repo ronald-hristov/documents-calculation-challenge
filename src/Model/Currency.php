@@ -1,8 +1,8 @@
-<?php
+<?php declare(strict_types=1);
 
 namespace RonaldHristov\DocumentsCalculationChallenge\Model;
 
-class Currency
+class Currency implements Model
 {
     /**
      * @var string
@@ -59,5 +59,10 @@ class Currency
     {
         $this->exchangeRate = $exchangeRate;
         return $this;
+    }
+
+    public function getId()
+    {
+        return $this->name;
     }
 }

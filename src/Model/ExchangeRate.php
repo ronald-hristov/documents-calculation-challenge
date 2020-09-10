@@ -1,10 +1,9 @@
-<?php
-
+<?php declare(strict_types=1);
 
 namespace RonaldHristov\DocumentsCalculationChallenge\Model;
 
 
-class ExchangeRate
+class ExchangeRate implements Model
 {
     /**
      * @var Currency
@@ -25,5 +24,10 @@ class ExchangeRate
     {
         $this->rate = $this->mainCurrency / $this->secondaryCurrency;
         return $this->rate;
+    }
+
+    public function getId()
+    {
+        return $this->mainCurrency->getId() . ':' . $this->secondaryCurrency->getId();
     }
 }

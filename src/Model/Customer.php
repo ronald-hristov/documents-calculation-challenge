@@ -1,8 +1,8 @@
-<?php
+<?php declare(strict_types=1);
 
 namespace RonaldHristov\DocumentsCalculationChallenge\Model;
 
-class Customer
+class Customer implements Model
 {
     /**
      * @var string
@@ -60,5 +60,15 @@ class Customer
     {
         $this->vatNumber = $vatNumber;
         return $this;
+    }
+
+    public function getId()
+    {
+        return $this->vatNumber;
+    }
+
+    public static function fromArray(array $array): Customer
+    {
+        return new self($array['customer'], $array['vatNumber']);
     }
 }

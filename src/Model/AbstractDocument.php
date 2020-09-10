@@ -1,8 +1,8 @@
-<?php
+<?php declare(strict_types=1);
 
 namespace RonaldHristov\DocumentsCalculationChallenge\Model;
 
-class AbstractDocument
+class AbstractDocument implements Model
 {
     /**
      * @var Customer
@@ -20,7 +20,7 @@ class AbstractDocument
     protected $currency;
 
     /**
-     * @var string
+     * @var float
      */
     protected $total;
 
@@ -31,9 +31,9 @@ class AbstractDocument
      * @param Customer $customer
      * @param string $documentNumber
      * @param Currency $currency
-     * @param string $total
+     * @param float $total
      */
-    public function __construct(Customer $customer, string $documentNumber, Currency $currency, string $total)
+    public function __construct(Customer $customer, string $documentNumber, Currency $currency, float $total)
     {
         $this->customer = $customer;
         $this->documentNumber = $documentNumber;
@@ -96,21 +96,25 @@ class AbstractDocument
     }
 
     /**
-     * @return string
+     * @return float
      */
-    public function getTotal(): string
+    public function getTotal(): float
     {
         return $this->total;
     }
 
     /**
-     * @param string $total
+     * @param float $total
      * @return AbstractDocument
      */
-    public function setTotal(string $total): AbstractDocument
+    public function setTotal(float $total): AbstractDocument
     {
         $this->total = $total;
         return $this;
     }
 
+    public function getId()
+    {
+       return $this->documentNumber;
+    }
 }
