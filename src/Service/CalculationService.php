@@ -15,84 +15,37 @@ use RonaldHristov\DocumentsCalculationChallenge\Repository\Repository;
 class CalculationService
 {
     /**
-     * @var Invoice[]
+     * @var Repository
      */
-    protected $invoices;
-
-    /**
-     * @var ExchangeRate[]
-     */
-    protected $exchangeRates = [];
-    /**
-     * @var Currency[]
-     */
-    protected $currencies = [];
-
-    /**
-     * @var Currency
-     */
-    protected $outputCurrency;
-
-    /**
-     * @var CustomerTotal[]
-     */
-    protected $totals = [];
+    protected $customerTotalsRepository;
 
     /**
      * CalculationService constructor.
-     * @param Invoice[] $invoices
-     * @param Currency[] $currencies
-     * @param Currency $outputCurrency
+     * @param Repository $customerTotalsRepository
      */
-    public function __construct(array $invoices, array $currencies, Currency $outputCurrency)
+    public function __construct(Repository $customerTotalsRepository)
     {
-        $this->invoices = $invoices;
-        $this->currencies = $currencies;
-        $this->outputCurrency = $outputCurrency;
+        $this->customerTotalsRepository = $customerTotalsRepository;
     }
 
-    public function calculateExchangeRates()
-    {
-
-    }
-    
     /**
+     * @param Invoice[] $invoices
+     * @param Currency $outputCurrency
      * @return CustomerTotal[]
      * @throws \Exception
      */
-    public function calculateTotals()
+    public function calculateTotals(array $invoices, Currency $outputCurrency)
     {
-        $customerTotalRepository = new Repository(new InMemoryPersistence());
-
-        foreach ($this->invoices as $invoice) {
-            if ($customerTotalRepository->idExists($invoice->getCustomer()->getId())) {
-                $customerTotal = $customerTotalRepository->findById($invoice->getCustomer()->getId());
+        foreach ($invoices as $invoice) {
+            if ($this->customerTotalsRepository->idExists($invoice->getCustomer()->getId())) {
+                $customerTotal = $this->customerTotalsRepository->findById($invoice->getCustomer()->getId());
             } else {
-                $customerTotal = new CustomerTotal($invoice->getCustomer(), $this->outputCurrency);
-                $customerTotalRepository->save($customerTotal);
+                $customerTotal = new CustomerTotal($invoice->getCustomer(), $outputCurrency);
+                $this->customerTotalsRepository->save($customerTotal);
             }
-            $invoiceTotal = $this->calculateInvoiceTotal($invoice);
-            $customerTotal->addToTotal($invoiceTotal);
+            $customerTotal->addToTotal($invoice->calculateTotal($outputCurrency));
         }
 
-        return $customerTotalRepository->findAll();
+        return $this->customerTotalsRepository->findAll();
     }
-
-    public function calculateInvoiceTotal(Invoice $invoice)
-    {
-        $rate = $this->outputCurrency->getExchangeRate() / $invoice->getCurrency()->getExchangeRate();
-        $total = $invoice->getTotal() * $rate;
-
-        foreach ($invoice->getNotes() as $note) {
-            $rate = $this->outputCurrency->getExchangeRate() / $note->getCurrency()->getExchangeRate();
-            $total += $note->getSignedTotal() * $rate;
-        }
-
-        if ($total < 0) {
-            throw new \Exception(sprintf('Invoice #%s has negative total', $invoice->getDocumentNumber()));
-        }
-
-        return $total;
-    }
-    
 }

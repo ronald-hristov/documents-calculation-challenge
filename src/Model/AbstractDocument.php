@@ -12,7 +12,7 @@ class AbstractDocument implements Model
     /**
      * @var string
      */
-    protected $documentNumber;
+    protected $documentNumber = '55';
 
     /**
      * @var string

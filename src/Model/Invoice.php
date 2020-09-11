@@ -33,18 +33,22 @@ class Invoice extends AbstractDocument
     }
 
     /**
+     * @param Currency $outputCurrency
+     * @return float
      * @throws \Exception
      */
-    public function calculateTotal(): float
+    public function calculateTotal(Currency $outputCurrency): float
     {
-        $total = $this->total;
-        foreach ($this->notes as $note) {
-            $total += $note->getSignedTotal();
+        $rate = $this->getCurrency()->getExchangeRate() / $outputCurrency->getExchangeRate();
+        $total = $this->getTotal() * $rate;
+
+        foreach ($this->getNotes() as $note) {
+            $rate = $note->getCurrency()->getExchangeRate() / $outputCurrency->getExchangeRate();
+            $total += $note->getSignedTotal() * $rate;
         }
 
         if ($total < 0) {
-            $message = sprintf('Invoice #%s has total value of %s', $this->documentNumber, $total);
-            throw new \Exception($message);
+            throw new \RuntimeException(sprintf('Invoice #%s has negative total', $this->getDocumentNumber()));
         }
 
         return $total;

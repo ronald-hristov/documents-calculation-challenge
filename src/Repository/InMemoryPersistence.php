@@ -16,10 +16,10 @@ class InMemoryPersistence implements Persistence
         $this->data[$id] = $data;
     }
 
-    public function retrieve(string $id): Model
+    public function retrieve(string $id)
     {
         if (!isset($this->data[$id])) {
-            throw new OutOfBoundsException(sprintf('No data found for ID %d', $id));
+            throw new OutOfBoundsException(sprintf('No data found for ID \'%s\'', $id));
         }
 
         return $this->data[$id];
@@ -38,7 +38,7 @@ class InMemoryPersistence implements Persistence
     public function delete(string $id)
     {
         if (!isset($this->data[$id])) {
-            throw new OutOfBoundsException(sprintf('No data found for ID %d', $id));
+            throw new OutOfBoundsException(sprintf('No data found for ID \'%s\'', $id));
         }
 
         unset($this->data[$id]);

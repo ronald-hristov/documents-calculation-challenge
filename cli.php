@@ -44,5 +44,19 @@ if (!class_exists($className)) {
 }
 
 /** @var \RonaldHristov\DocumentsCalculationChallenge\Console\CommandInterface $command */
-$command = new $className();
-$command->run($params);
+
+$factoryName = 'RonaldHristov\\DocumentsCalculationChallenge\\Console\\' . ucfirst($argv[1]) . 'Factory';
+if (class_exists($factoryName)) {
+    /** @var \RonaldHristov\DocumentsCalculationChallenge\Console\FactoryInterface $factory */
+    $factory = new $factoryName();
+    $command = $factory->create();
+} else {
+    $command = new $className();
+}
+
+try {
+    $result = $command->run($params);
+} catch (\Exception $e) {
+    echo $e->getMessage() . "\n";
+}
+echo implode("\n", $result) . "\n";

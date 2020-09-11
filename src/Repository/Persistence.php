@@ -10,7 +10,7 @@ interface Persistence
 {
     public function persist(object $object, string $id);
 
-    public function retrieve(string $id): Model;
+    public function retrieve(string $id);
 
     public function retrieveAll(): array;
 

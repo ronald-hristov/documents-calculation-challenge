@@ -1,28 +1,18 @@
 <?php declare(strict_types=1);
 
 
-namespace RonaldHristov\DocumentsCalculationChallenge\Service;
+namespace RonaldHristov\DocumentsCalculationChallenge\Service\Import;
 
 
-class ImportCsvToArray
+class CsvToArray implements FileToArray
 {
-    /**
-     * @var string
-     */
-    protected $filePath;
-
-    /**
-     * ImportCsvToArray constructor.
-     * @param string $filePath
-     */
-    public function __construct(string $filePath)
+    public function run(string $filePath): \Iterator
     {
-        $this->filePath = $filePath;
-    }
+        if (!file_exists($filePath)) {
+            throw new \RuntimeException('File ' . $filePath . ' does not exist');
+        }
 
-    public function run()
-    {
-        if (($handle = fopen($this->filePath, "r")) !== false) {
+        if (($handle = fopen($filePath, "r")) !== false) {
             $headers = $this->wordsToCameCase(fgetcsv($handle, 1000, ","));
 
             while (($data = fgetcsv($handle, 1000, ",")) !== false) {

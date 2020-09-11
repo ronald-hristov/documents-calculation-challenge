@@ -37,9 +37,17 @@ class CustomerTotal implements Model
         $this->total += $value;
     }
 
+    /**
+     * @return float
+     */
+    public function getTotal(): float
+    {
+        return $this->total;
+    }
+
     public function __toString()
     {
-        $string = sprintf('Customer %s - %s %s', $this->customer->getName(), number_format($this->total, 2), $this->currency->getName());
+        $string = sprintf('Customer %s - %s %s', $this->customer->getName(), number_format($this->getTotal(), 2), $this->currency->getName());
         return $string;
     }
 

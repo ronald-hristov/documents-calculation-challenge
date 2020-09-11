@@ -12,7 +12,8 @@ use RonaldHristov\DocumentsCalculationChallenge\Model\Invoice;
 use RonaldHristov\DocumentsCalculationChallenge\Repository\InMemoryPersistence;
 use RonaldHristov\DocumentsCalculationChallenge\Repository\Repository;
 use RonaldHristov\DocumentsCalculationChallenge\Service\CalculationService;
-use RonaldHristov\DocumentsCalculationChallenge\Service\ImportCsvToArray;
+use RonaldHristov\DocumentsCalculationChallenge\Service\Import\CsvToArray;
+use RonaldHristov\DocumentsCalculationChallenge\Service\Import\FileToArray;
 
 class Import implements CommandInterface
 {
@@ -28,11 +29,53 @@ class Import implements CommandInterface
     ];
 
     /**
-     * @var ImportCsvToArray
+     * @var FileToArray
      */
-    protected $importCsvToArray;
+    protected $fileToToArray;
 
-    public function run(array $params)
+    /**
+     * @var Repository
+     */
+    protected $customerRepository;
+
+    /**
+     * @var Repository
+     */
+    protected $documentRepository;
+
+    /**
+     * @var Repository
+     */
+    protected $currencyRepository;
+
+    /**
+     * @var CalculationService
+     */
+    protected $calculationService;
+
+    /**
+     * Import constructor.
+     * @param FileToArray $fileToToArray
+     * @param Repository $customerRepository
+     * @param Repository $documentRepository
+     * @param Repository $currencyRepository
+     * @param CalculationService $calculationService
+     */
+    public function __construct(FileToArray $fileToToArray, Repository $customerRepository, Repository $documentRepository, Repository $currencyRepository, CalculationService $calculationService)
+    {
+        $this->fileToToArray = $fileToToArray;
+        $this->customerRepository = $customerRepository;
+        $this->documentRepository = $documentRepository;
+        $this->currencyRepository = $currencyRepository;
+        $this->calculationService = $calculationService;
+    }
+
+    /**
+     * @param array $params
+     * @return array
+     * @throws \Exception
+     */
+    public function run(array $params): array
     {
         $filePath = $params[0];
         $currenciesArr = $params[1];
@@ -40,32 +83,27 @@ class Import implements CommandInterface
         $vat = $params['vat'] ?? null;
 
         // Create currency objects
-        $currencyRepository = new Repository(new InMemoryPersistence());
-
         foreach ($currenciesArr as $currencyName => $rate) {
-            $currency = new Currency($currencyName, (float) $rate);
-            $currencyRepository->save($currency);
+            $currency = new Currency($currencyName, (float)$rate);
+            $this->currencyRepository->save($currency);
         }
 
         // Output currency
         /** @var Currency $outputCurrency */
-        $outputCurrency = $currencyRepository->findById($outputCurrencyName);
-
-        $customerRepository = new Repository(new InMemoryPersistence());
-        $documentRepository = new Repository(new InMemoryPersistence());
+        $outputCurrency = $this->currencyRepository->findById($outputCurrencyName);
 
         // Process Row
-        $importCsvToArray = new ImportCsvToArray($filePath);
-        foreach ($importCsvToArray->run() as $row) {
+        $importCsvToArray = new CsvToArray();
+        foreach ($importCsvToArray->run($filePath) as $row) {
             if (!empty($vat) && $vat != $row['vatNumber']) {
                 continue;
             }
 
-            $this->processRow($row, $customerRepository, $currencyRepository, $documentRepository);
+            $this->processRow($row);
         }
 
         $invoices = [];
-        $documents = $documentRepository->findAll();
+        $documents = $this->documentRepository->findAll();
         foreach ($documents as $document) {
             if (!$document instanceof Invoice) {
                 continue;
@@ -74,57 +112,48 @@ class Import implements CommandInterface
             $invoices[] = $document;
         }
 
-
-
-        // Initiate calculation service
-        $calculationService = new CalculationService($invoices, $currencyRepository->findAll(), $outputCurrency);
         // Calculate and output result
-        $totals = $calculationService->calculateTotals();
+        $totals = $this->calculationService->calculateTotals($invoices, $outputCurrency);
 
-        foreach ($totals as $total) {
-            echo $total . "\n";
-        }
+        return $totals;
     }
 
     /**
      * @param array $row
-     * @param Repository $customerRepository
-     * @param Repository $currencyRepository
-     * @param Repository $documentRepository
      * @throws \Exception
      */
-    public function processRow(array $row, Repository $customerRepository, Repository $currencyRepository, Repository $documentRepository)
+    protected function processRow(array $row)
     {
-       $customerVat = $row['vatNumber'];
-       if ($customerRepository->idExists($customerVat)) {
-           $customer = $customerRepository->findById($customerVat);
-       } else {
-           $customer = Customer::fromArray($row);
-       }
+        $customerVat = $row['vatNumber'];
+        if ($this->customerRepository->idExists($customerVat)) {
+            $customer = $this->customerRepository->findById($customerVat);
+        } else {
+            $customer = Customer::fromArray($row);
+        }
 
-       /** @var Currency $currency */
-       $currency = $currencyRepository->findById($row['currency']);
+        /** @var Currency $currency */
+        $currency = $this->currencyRepository->findById($row['currency']);
 
-       switch ($row['type']) {
-           case self::INVOICE:
-               $document = new Invoice($customer, $row['documentNumber'], $currency, (float) $row['total']);
-               break;
-           case self::CREDIT_NOTE:
-               /** @var Invoice $invoice */
-               $invoice = $documentRepository->findById($row['parentDocument']);
-               $document = new CreditNote($customer, $row['documentNumber'], $currency, (float) $row['total'], $row['parentDocument']);
-               $invoice->addNote($document);
-               break;
-           case self::DEBIT_NOTE:
-               /** @var Invoice $invoice */
-               $invoice = $documentRepository->findById($row['parentDocument']);
-               $document = new DebitNote($customer, $row['documentNumber'], $currency, (float) $row['total'], $row['parentDocument']);
-               $invoice->addNote($document);
-               break;
-           default:
-               throw new \Exception('Unrecognized document type: ' . $row['type']);
-       }
+        switch ($row['type']) {
+            case self::INVOICE:
+                $document = new Invoice($customer, $row['documentNumber'], $currency, (float)$row['total']);
+                break;
+            case self::CREDIT_NOTE:
+                /** @var Invoice $invoice */
+                $invoice = $this->documentRepository->findById($row['parentDocument']);
+                $document = new CreditNote($customer, $row['documentNumber'], $currency, (float)$row['total'], $row['parentDocument']);
+                $invoice->addNote($document);
+                break;
+            case self::DEBIT_NOTE:
+                /** @var Invoice $invoice */
+                $invoice = $this->documentRepository->findById($row['parentDocument']);
+                $document = new DebitNote($customer, $row['documentNumber'], $currency, (float)$row['total'], $row['parentDocument']);
+                $invoice->addNote($document);
+                break;
+            default:
+                throw new \Exception('Unrecognized document type: ' . $row['type']);
+        }
 
-        $documentRepository->save($document);
+        $this->documentRepository->save($document);
     }
 }

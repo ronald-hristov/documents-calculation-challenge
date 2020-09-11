@@ -4,7 +4,7 @@
 namespace RonaldHristov\DocumentsCalculationChallenge\Console;
 
 
-interface CommandInterface
+interface FactoryInterface
 {
-    public function run(array $params): array;
+    public function create();
 }
